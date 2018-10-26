@@ -3,14 +3,23 @@ error_reporting('E_ALL');
 ini_set("display_errors", true);
 
 if(!isset($_GET['action'])){
-	echo "Can't find action param";
-	exit;
+	die("Action param missing");
 }
-
-if(!isset($_GET['action']) || !in_array($_GET['action'], array('install', 'require'))){
-	die("Invalid action commands");
+// ----------------------------------------------------------------------------------------
+// Check action has a valid command 
+// ----------------------------------------------------------------------------------------
+if(!isset($_GET['action']) || !in_array($_GET['action'], ['install', 'require', 'list'])){
+	die("Invalid action command");
 }
-
+// ----------------------------------------------------------------------------------------
+// Check the composer.phar file is present
+// ----------------------------------------------------------------------------------------
+if(!file_exists('composer.phar')){
+	die("File composer.phar missing. File must be present for composer to run");
+}
+// ----------------------------------------------------------------------------------------
+// Fetch the action
+// ----------------------------------------------------------------------------------------
 $action = trim($_GET['action']);
 
 // ----------------------------------------------------------------------------------------
@@ -18,6 +27,9 @@ $action = trim($_GET['action']);
 // ----------------------------------------------------------------------------------------
 putenv("HOME=" . dirname(__FILE__));
 
+// ----------------------------------------------------------------------------------------
+// Fork the different commands
+// ----------------------------------------------------------------------------------------
 switch ($action) {
 	case 'install':
 		// ----------------------------------------------------------------------------------------
@@ -26,12 +38,30 @@ switch ($action) {
 		exec("php composer.phar install");
 		break;
 
+	case 'list':
+		exec("php composer.phar list 2>&1", $output);
+		foreach ($output as $o) {
+			print $o . "<br>";
+		}
+		break;
+
 	case 'require':
 		if(!isset($_GET['repo'])){
 			die("El comando repo requiere un valor de repositorio valido");
 		}
 
+		// ----------------------------------------------------------------------------------------
+		// Add security to strip unwanted characters here, like pipes, or & from repo.
+		// ----------------------------------------------------------------------------------------
+
 		$repo = $_GET['repo'];
+
+		if(isset($_GET['v'])){
+			$repo .= ':' . $_GET['v'];
+		}
+		// ----------------------------------------------------------------------------------------
+		// Note that here we execute the binary composer.phar
+		// ----------------------------------------------------------------------------------------
 		exec("php composer.phar require {$repo} 2>&1", $output);
 		// ----------------------------------------------------------------------------------------
 		// Test output
